@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vector Studio — Web Vector Editor</title>
+<style>
+:root{--bg:#17191e;--panel:#22252c;--panel2:#292d35;--line:#3a3f49;--text:#e9ebef;--muted:#a3a9b5;--accent:#6e8bff;--accent2:#8da2ff}
+*{box-sizing:border-box}html,body{margin:0;height:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+button,input,select{font:inherit}button{border:1px solid var(--line);background:#30343d;color:var(--text);border-radius:6px;padding:7px 10px;cursor:pointer}button:hover{background:#3a404b}button.active{background:#4357a8;border-color:#7890ff}button:disabled{opacity:.4;cursor:not-allowed}
+.topbar{height:48px;display:flex;align-items:center;gap:8px;padding:0 12px;background:#202329;border-bottom:1px solid var(--line);white-space:nowrap}.brand{font-weight:800;letter-spacing:.2px;margin-right:10px}.brand span{color:var(--accent2)}.topbar .sep{height:25px;width:1px;background:var(--line);margin:0 3px}.topbar button{padding:6px 9px;font-size:12px}.filename{background:transparent;border:0;color:#fff;width:150px;font-size:13px}.spacer{flex:1}.workspace{display:grid;grid-template-columns:54px minmax(0,1fr) 250px;height:calc(100% - 48px)}
+.toolbar{background:var(--panel);border-right:1px solid var(--line);padding:8px 6px;display:flex;flex-direction:column;gap:5px;align-items:center}.tool{width:40px;height:38px;padding:0;display:grid;place-items:center;font-size:17px;position:relative}.tool small{position:absolute;right:3px;bottom:1px;font-size:8px;color:#c6cbd5}.toolgroup{width:28px;height:1px;background:var(--line);margin:4px 0}
+.stage{position:relative;min-width:0;min-height:0;background-color:#17191e;background-image:radial-gradient(#333741 .8px,transparent .8px);background-size:18px 18px;overflow:hidden}
+.canvas-wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#svgCanvas{width:800px;height:560px;max-width:none;background:white;box-shadow:0 12px 50px #0008;touch-action:none;overflow:visible}
+#svgCanvas .obj{cursor:move}#svgCanvas .obj.selected{outline:none;filter:drop-shadow(0 0 1px #4d72ff)}.selection-box{fill:none;stroke:#4c72ff;stroke-width:1.3;stroke-dasharray:4 3;pointer-events:none;vector-effect:non-scaling-stroke}.handle{fill:white;stroke:#4c72ff;stroke-width:1.3;vector-effect:non-scaling-stroke}
+.status{position:absolute;bottom:0;left:0;right:0;height:28px;background:#202329eF;border-top:1px solid var(--line);display:flex;align-items:center;gap:15px;padding:0 12px;color:var(--muted);font-size:11px}.status button{padding:2px 7px;font-size:11px}
+.panel{background:var(--panel);border-left:1px solid var(--line);overflow:auto}.panel-head{padding:13px 13px 9px;font-size:12px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;color:#dfe3eb;border-bottom:1px solid var(--line)}.section{padding:12px;border-bottom:1px solid var(--line)}.section h3{font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:.6px;margin:0 0 10px}.field{display:flex;align-items:center;gap:7px;margin:8px 0;font-size:12px;color:#c8cdd7}.field label{width:55px;flex-shrink:0}.field input[type=text],.field input[type=number],.field select{min-width:0;width:100%;background:#17191e;color:var(--text);border:1px solid var(--line);border-radius:5px;padding:6px}.field input[type=color]{width:32px;height:28px;padding:1px;border:1px solid var(--line);background:#17191e;border-radius:5px}.field input[type=range]{width:100%}.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}.two .field{min-width:0}.two .field label{width:auto}.color-row{display:flex;align-items:center;gap:8px}.swatch{width:23px;height:23px;border-radius:5px;border:1px solid #ffffff55;cursor:pointer}.swatches{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.layer{display:flex;align-items:center;gap:7px;padding:8px;border-radius:5px;font-size:12px;cursor:pointer}.layer:hover{background:#30343d}.layer.active{background:#35416b}.layer .eye{color:#a9b0bf}.layer .lname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.layer button{padding:2px 5px;font-size:10px}.empty{font-size:12px;color:var(--muted);line-height:1.5}.hint{font-size:11px;color:var(--muted);line-height:1.55}.tool-label{font-size:9px;color:var(--muted);margin-top:1px}.mobile-menu{display:none}
+@media(max-width:800px){.workspace{grid-template-columns:48px minmax(0,1fr)}.panel{display:none}.topbar{gap:4px;padding:0 6px}.topbar button{font-size:11px;padding:6px}.brand{font-size:13px;margin-right:2px}.filename{width:85px}.tool{width:36px}.topbar .hide-mobile{display:none}.mobile-menu{display:block}.status{gap:8px;padding:0 6px}.status .wide{display:none}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">VECTOR <span>STUDIO</span></div>
+  <input id="fileName" class="filename" value="Untitled design" aria-label="Nama dokumen">
+  <div class="sep"></div>
+  <button id="newBtn" title="Dokumen baru">＋ Baru</button><button id="openBtn" title="Buka SVG">Buka SVG</button><input id="fileInput" type="file" accept=".svg,image/svg+xml" hidden>
+  <button id="undoBtn" title="Undo (Ctrl+Z)">↶</button><button id="redoBtn" title="Redo (Ctrl+Y)">↷</button>
+  <div class="sep hide-mobile"></div>
+  <button id="exportSvg">Ekspor SVG</button><button id="exportPng">Ekspor PNG</button>
+  <div class="spacer"></div><button id="helpBtn" class="hide-mobile">Panduan</button>
+</header>
+<div class="workspace">
+  <aside class="toolbar" aria-label="Tools">
+    <button class="tool active" data-tool="select" title="Pilih (V)">↖<small>V</small></button>
+    <button class="tool" data-tool="direct" title="Edit objek / pilih">◇<small>A</small></button>
+    <div class="toolgroup"></div>
+    <button class="tool" data-tool="rect" title="Persegi (M)">▭<small>M</small></button>
+    <button class="tool" data-tool="ellipse" title="Elips (L)">◯<small>L</small></button>
+    <button class="tool" data-tool="line" title="Garis">／</button>
+    <button class="tool" data-tool="pen" title="Pen / klik untuk titik, double-click selesai">⌁<small>P</small></button>
+    <button class="tool" data-tool="freehand" title="Pensil / gambar bebas">✎</button>
+    <button class="tool" data-tool="text" title="Teks (T)">T<small>T</small></button>
+    <div class="toolgroup"></div>
+    <button class="tool" data-tool="eyedropper" title="Ambil warna dari objek">◉</button>
+    <button class="tool" data-tool="hand" title="Geser kanvas">✋</button>
+    <div class="toolgroup"></div>
+    <button class="tool" id="deleteBtn" title="Hapus objek terpilih (Delete)">⌫</button>
+    <button class="tool" id="duplicateBtn" title="Duplikat (Ctrl+D)">▣</button>
+  </aside>
+  <main class="stage" id="stage">
+    <div class="canvas-wrap" id="canvasWrap">
+      <svg id="svgCanvas" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" role="img" aria-label="Kanvas desain vektor">
+        <rect id="pageBg" x="0" y="0" width="800" height="560" fill="#ffffff" pointer-events="none"/>
+        <g id="art"></g>
+        <g id="overlay"></g>
+      </svg>
+    </div>
+    <div class="status"><span id="statusTool">Tool: Pilih</span><span id="coords">X: 0 · Y: 0</span><span id="selectionStatus">Tidak ada objek dipilih</span><span class="spacer"></span><button id="zoomOut">−</button><span id="zoomLabel">100%</span><button id="zoomIn">＋</button><button id="fitBtn" class="wide">Fit</button></div>
+  </main>
+  <aside class="panel">
+    <div class="panel-head">Properties / Layers</div>
+    <div class="section">
+      <h3>Dokumen</h3>
+      <div class="two">
+        <div class="field"><label>Lebar</label><input id="docW" type="number" min="100" max="5000" value="800"></div>
+        <div class="field"><label>Tinggi</label><input id="docH" type="number" min="100" max="5000" value="560"></div>
+      </div>
+      <div class="field"><label>Background</label><input id="bgColor" type="color" value="#ffffff"><button id="bgTransparent">Transparan</button></div>
+      <div class="hint">Kanvas berbasis SVG. Desain tetap vektor saat diekspor ke SVG.</div>
+    </div>
+    <div class="section">
+      <h3>Appearance</h3>
+      <div class="field"><label>Fill</label><input id="fillColor" type="color" value="#6e8bff"><button id="noFill">Tanpa fill</button></div>
+      <div class="field"><label>Stroke</label><input id="strokeColor" type="color" value="#252a35"><button id="noStroke">Tanpa garis</button></div>
+      <div class="field"><label>Ketebalan</label><input id="strokeWidth" type="number" min="0" max="100" step="0.5" value="2"></div>
+      <div class="field"><label>Opacity</label><input id="opacity" type="range" min="0" max="100" value="100"><span id="opacityVal">100%</span></div>
+      <div class="swatches">
+        <div class="swatch" style="background:#ffffff" data-color="#ffffff"></div><div class="swatch" style="background:#17191e" data-color="#17191e"></div><div class="swatch" style="background:#6e8bff" data-color="#6e8bff"></div><div class="swatch" style="background:#e9b86e" data-color="#e9b86e"></div><div class="swatch" style="background:#ed6a5a" data-color="#ed6a5a"></div><div class="swatch" style="background:#62b6a5" data-color="#62b6a5"></div><div class="swatch" style="background:#a78bfa" data-color="#a78bfa"></div><div class="swatch" style="background:#d4d8df" data-color="#d4d8df"></div>
+      </div>
+    </div>
+    <div class="section">
+      <h3>Transform</h3>
+      <div class="two"><div class="field"><label>X</label><input id="propX" type="number"></div><div class="field"><label>Y</label><input id="propY" type="number"></div></div>
+      <div class="two"><div class="field"><label>W</label><input id="propW" type="number" min="1"></div><div class="field"><label>H</label><input id="propH" type="number" min="1"></div></div>
+      <div class="field"><label>Rotasi°</label><input id="rotation" type="number" min="-360" max="360" value="0"></div>
+      <div class="field"><label>Nama</label><input id="objName" type="text" placeholder="Nama objek"></div>
+      <div class="two"><button id="frontBtn">Ke depan</button><button id="backBtn">Ke belakang</button></div>
+    </div>
+    <div class="section">
+      <h3>Layers</h3>
+      <div id="layers"><div class="empty">Belum ada objek. Pilih tool lalu gambar di kanvas.</div></div>
+    </div>
+    <div class="section">
+      <h3>Shortcut</h3>
+      <div class="hint">V Pilih · M Persegi · L Elips · P Pen · T Teks<br>Delete hapus · Ctrl+D duplikat · Ctrl+Z undo<br>Shift saat menggambar: proporsi sempurna<br>Esc: batalkan gambar yang sedang dibuat</div>
+    </div>
+  </aside>
+</div>
+<script>
+(()=>{
+const $=id=>document.getElementById(id), svg=$('svgCanvas'), art=$('art'), overlay=$('overlay');
+const NS='http://www.w3.org/2000/svg';
+let tool='select', selected=null, drawing=null, start=null, zoom=1, history=[], future=[], pathPoints=[], drag=null, pan=null, bg='#ffffff', transparent=false, idCounter=1;
+const names={select:'Pilih',direct:'Edit objek',rect:'Persegi',ellipse:'Elips',line:'Garis',pen:'Pen',freehand:'Pensil',text:'Teks',eyedropper:'Pipet warna',hand:'Tangan'};
+const make=(tag,attrs={})=>{let n=document.createElementNS(NS,tag);Object.entries(attrs).forEach(([k,v])=>n.setAttribute(k,v));return n};
+function objects(){return [...art.children]}
+function objectName(el){return el?.dataset.name||el?.tagName||'Objek'}
+function snapshot(){return {svg:art.innerHTML,bg,transparent,w:svg.viewBox.baseVal.width,h:svg.viewBox.baseVal.height}}
+function saveHistory(){history.push(snapshot());if(history.length>80)history.shift();future=[];updateUndo()}
+function restore(s){art.innerHTML=s.svg;bg=s.bg;transparent=s.transparent;setDoc(s.w,s.h,false);$('bgColor').value=bg;$('pageBg').setAttribute('fill',transparent?'none':bg);selected=null;refresh();updateUndo()}
+function updateUndo(){$('undoBtn').disabled=!history.length;$('redoBtn').disabled=!future.length}
+function undo(){if(!history.length)return;future.push(snapshot());restore(history.pop())}
+function redo(){if(!future.length)return;history.push(snapshot());restore(future.pop())}
+function setDoc(w,h,record=true){w=Math.max(100,Math.min(5000,+w||800));h=Math.max(100,Math.min(5000,+h||560));if(record)saveHistory();svg.setAttribute('viewBox',`0 0 ${w} ${h}`);svg.style.width=w+'px';svg.style.height=h+'px';$('pageBg').setAttribute('width',w);$('pageBg').setAttribute('height',h);$('docW').value=w;$('docH').value=h;fit()}
+function fit(){let stage=$('stage'),w=stage.clientWidth-70,h=stage.clientHeight-65;if(!w||!h)return;let vb=svg.viewBox.baseVal;zoom=Math.min(w/vb.width,h/vb.height,1);applyZoom()}
+function applyZoom(){let vb=svg.viewBox.baseVal;svg.style.width=(vb.width*zoom)+'px';svg.style.height=(vb.height*zoom)+'px';$('zoomLabel').textContent=Math.round(zoom*100)+'%'}
+function coords(e){let p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;let q=p.matrixTransform(svg.getScreenCTM().inverse());return {x:q.x,y:q.y}}
+function setTool(t){tool=t;document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool===t));$('statusTool').textContent='Tool: '+(names[t]||t);svg.style.cursor=t==='hand'?'grab':t==='select'?'default':t==='eyedropper'?'copy':'crosshair';}
+function styleNew(el){el.setAttribute('fill',$('fillColor').value);el.setAttribute('stroke',$('strokeColor').value);el.setAttribute('stroke-width',$('strokeWidth').value||0);el.setAttribute('stroke-linejoin','round');el.setAttribute('stroke-linecap','round');el.setAttribute('opacity',+$('opacity').value/100);el.classList.add('obj');el.dataset.name=(el.tagName==='text'?'Teks':el.tagName==='path'?'Path':el.tagName==='line'?'Garis':el.tagName==='ellipse'?'Elips':'Persegi')+' '+idCounter++;return el}
+function select(el){selected=el&&art.contains(el)?el:null;refresh();drawOverlay()}
+function refresh(){renderLayers();updateProps();$('selectionStatus').textContent=selected?'Dipilih: '+objectName(selected):'Tidak ada objek dipilih';}
+function renderLayers(){let box=$('layers');box.innerHTML='';let arr=objects().slice().reverse();if(!arr.length){box.innerHTML='<div class="empty">Belum ada objek. Pilih tool lalu gambar di kanvas.</div>';return}arr.forEach(el=>{let row=document.createElement('div');row.className='layer'+(el===selected?' active':'');let eye=document.createElement('span');eye.className='eye';eye.textContent=el.getAttribute('display')==='none'?'◌':'◉';eye.title='Tampilkan/sembunyikan';eye.onclick=e=>{e.stopPropagation();el.setAttribute('display',el.getAttribute('display')==='none'?'inline':'none');eye.textContent=el.getAttribute('display')==='none'?'◌':'◉';saveHistory()};let name=document.createElement('span');name.className='lname';name.textContent=objectName(el);let del=document.createElement('button');del.textContent='×';del.onclick=e=>{e.stopPropagation();saveHistory();el.remove();if(el===selected)selected=null;refresh();drawOverlay()};row.append(eye,name,del);row.onclick=()=>select(el);box.append(row)})}
+function bbox(el){try{let b=el.getBBox();let m=el.getCTM(), inv=svg.getCTM().inverse();let p1=svg.createSVGPoint();p1.x=b.x;p1.y=b.y;let p2=svg.createSVGPoint();p2.x=b.x+b.width;p2.y=b.y+b.height;let a=p1.matrixTransform(m).matrixTransform(inv),c=p2.matrixTransform(m).matrixTransform(inv);return {x:Math.min(a.x,c.x),y:Math.min(a.y,c.y),w:Math.abs(c.x-a.x),h:Math.abs(c.y-a.y)}}catch(e){return {x:0,y:0,w:0,h:0}}}
+function drawOverlay(){overlay.innerHTML='';if(!selected)return;let b=bbox(selected);overlay.append(make('rect',{x:b.x-3,y:b.y-3,width:Math.max(6,b.w+6),height:Math.max(6,b.h+6),class:'selection-box'}));[[b.x-3,b.y-3],[b.x+b.w+3,b.y-3],[b.x-3,b.y+b.h+3],[b.x+b.w+3,b.y+b.h+3]].forEach(([x,y])=>overlay.append(make('rect',{x:x-3,y:y-3,width:6,height:6,class:'handle'})))}
+function updateProps(){let el=selected,ids=['propX','propY','propW','propH','rotation','objName'];ids.forEach(id=>$(id).disabled=!el);if(!el){['propX','propY','propW','propH'].forEach(id=>$(id).value='');$('objName').value='';return}let b=bbox(el);$('propX').value=Math.round(b.x);$('propY').value=Math.round(b.y);$('propW').value=Math.round(b.w);$('propH').value=Math.round(b.h);$('rotation').value=parseFloat((el.getAttribute('transform')||'').match(/rotate\(([-\d.]+)/)?.[1]||0);$('objName').value=objectName(el);let f=el.getAttribute('fill');if(f&&f.startsWith('#'))$('fillColor').value=f;let s=el.getAttribute('stroke');if(s&&s.startsWith('#'))$('strokeColor').value=s;$('strokeWidth').value=el.getAttribute('stroke-width')||2;$('opacity').value=Math.round(+(el.getAttribute('opacity')||1)*100);$('opacityVal').textContent=$('opacity').value+'%'}
+function findObj(node){while(node&&node!==art){if(node.classList?.contains('obj'))return node;node=node.parentNode}return null}
+function startShape(p){start=p;let el;if(tool==='rect')el=make('rect',{x:p.x,y:p.y,width:0,height:0,rx:0});if(tool==='ellipse')el=make('ellipse',{cx:p.x,cy:p.y,rx:0,ry:0});if(tool==='line')el=make('line',{x1:p.x,y1:p.y,x2:p.x,y2:p.y});if(tool==='freehand')el=make('path',{d:`M ${p.x} ${p.y}`});if(!el)return;styleNew(el);if(tool==='line'){el.setAttribute('fill','none')}if(tool==='freehand'){el.setAttribute('fill','none');el.setAttribute('stroke-width',$('strokeWidth').value||3)}art.append(el);drawing=el;select(el)}
+function updateShape(p,e){if(!drawing||!start)return;let dx=p.x-start.x,dy=p.y-start.y;if(e?.shiftKey){let m=Math.max(Math.abs(dx),Math.abs(dy));dx=Math.sign(dx||1)*m;dy=Math.sign(dy||1)*m;p={x:start.x+dx,y:start.y+dy}}if(tool==='rect'){drawing.setAttribute('x',Math.min(start.x,p.x));drawing.setAttribute('y',Math.min(start.y,p.y));drawing.setAttribute('width',Math.abs(dx));drawing.setAttribute('height',Math.abs(dy))}if(tool==='ellipse'){drawing.setAttribute('cx',(start.x+p.x)/2);drawing.setAttribute('cy',(start.y+p.y)/2);drawing.setAttribute('rx',Math.abs(dx)/2);drawing.setAttribute('ry',Math.abs(dy)/2)}if(tool==='line'){drawing.setAttribute('x2',p.x);drawing.setAttribute('y2',p.y)}if(tool==='freehand')drawing.setAttribute('d',(drawing.getAttribute('d')||'')+` L ${p.x} ${p.y}`);drawOverlay()}
+function finishDrawing(){if(drawing){saveHistory();drawing=null;start=null;refresh();drawOverlay()}}
+svg.addEventListener('pointerdown',e=>{if(e.button!==0)return;let p=coords(e);$('coords').textContent=`X: ${Math.round(p.x)} · Y: ${Math.round(p.y)}`;if(tool==='hand'){pan={x:e.clientX,y:e.clientY,left:$('canvasWrap').scrollLeft,top:$('canvasWrap').scrollTop};svg.setPointerCapture(e.pointerId);return}if(tool==='eyedropper'){let el=findObj(e.target);if(el){let f=el.getAttribute('fill');if(f&&f!=='none')$('fillColor').value=f}setTool('select');return}if(tool==='text'){let val=prompt('Masukkan teks:','Teks baru');if(val!==null&&val!==''){saveHistory();let el=styleNew(make('text',{x:p.x,y:p.y,'font-family':'Arial, sans-serif','font-size':36,fill:$('fillColor').value,stroke:'none'}));el.textContent=val;art.append(el);select(el);refresh()}return}
+ if(['rect','ellipse','line','freehand'].includes(tool)){saveHistory();svg.setPointerCapture(e.pointerId);startShape(p);return}
+ if(tool==='pen'){pathPoints.push(p);if(!drawing){saveHistory();drawing=styleNew(make('path',{d:`M ${p.x} ${p.y}`,fill:'none'}));drawing.setAttribute('stroke-width',$('strokeWidth').value||2);art.append(drawing);select(drawing)}else{drawing.setAttribute('d',drawing.getAttribute('d')+` L ${p.x} ${p.y}`)}if(e.detail>=2){finishDrawing();pathPoints=[]}return}
+ let el=findObj(e.target);if(el){select(el);let b=bbox(el);drag={el,x:p.x,y:p.y,origX:b.x,origY:b.y};svg.setPointerCapture(e.pointerId)}else{select(null)}
+});
+svg.addEventListener('pointermove',e=>{let p=coords(e);$('coords').textContent=`X: ${Math.round(p.x)} · Y: ${Math.round(p.y)}`;if(pan){$('canvasWrap').scrollLeft=pan.left-(e.clientX-pan.x);$('canvasWrap').scrollTop=pan.top-(e.clientY-pan.y);return}if(drawing&&start){updateShape(p,e);return}if(drag){let dx=p.x-drag.x,dy=p.y-drag.y;drag.el.setAttribute('transform',`translate(${dx} ${dy})`);drawOverlay();return}});
+svg.addEventListener('pointerup',e=>{if(drawing&&start)finishDrawing();if(drag){saveHistory();drag=null;refresh();drawOverlay()}pan=null});
+svg.addEventListener('dblclick',()=>{if(tool==='pen'){finishDrawing();pathPoints=[]}});
+svg.addEventListener('pointercancel',()=>{drawing=null;start=null;drag=null;pan=null});
+function deleteSelected(){if(!selected)return;saveHistory();selected.remove();selected=null;refresh();drawOverlay()}
+function duplicate(){if(!selected)return;saveHistory();let clone=selected.cloneNode(true);clone.dataset.name=objectName(selected)+' copy';let t=clone.getAttribute('transform')||'';clone.setAttribute('transform',(t+' translate(16 16)').trim());art.append(clone);select(clone)}
+$('deleteBtn').onclick=deleteSelected;$('duplicateBtn').onclick=duplicate;$('undoBtn').onclick=undo;$('redoBtn').onclick=redo;
+document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{if(tool==='pen'&&drawing){finishDrawing();pathPoints=[]}setTool(b.dataset.tool)});
+$('fillColor').oninput=()=>{if(selected){selected.setAttribute('fill',$('fillColor').value);if(selected.tagName==='text')selected.setAttribute('fill',$('fillColor').value)}};
+$('strokeColor').oninput=()=>{if(selected)selected.setAttribute('stroke',$('strokeColor').value)};
+$('strokeWidth').onchange=()=>{if(selected)selected.setAttribute('stroke-width',$('strokeWidth').value)};
+$('opacity').oninput=()=>{$('opacityVal').textContent=$('opacity').value+'%';if(selected)selected.setAttribute('opacity',+$('opacity').value/100)};
+$('noFill').onclick=()=>{if(selected)selected.setAttribute('fill','none')};
+$('noStroke').onclick=()=>{if(selected)selected.setAttribute('stroke','none')};
+document.querySelectorAll('.swatch').forEach(s=>s.onclick=()=>{$('fillColor').value=s.dataset.color;if(selected)selected.setAttribute('fill',s.dataset.color)});
+$('bgColor').oninput=()=>{bg=$('bgColor').value;transparent=false;$('pageBg').setAttribute('fill',bg)};
+$('bgTransparent').onclick=()=>{transparent=true;$('pageBg').setAttribute('fill','none')};
+$('docW').onchange=()=>setDoc($('docW').value,$('docH').value);$('docH').onchange=()=>setDoc($('docW').value,$('docH').value);
+['propX','propY','propW','propH'].forEach(id=>$(id).onchange=()=>{if(!selected)return;let b=bbox(selected);let x=+$('propX').value,y=+$('propY').value,w=+$('propW').value,h=+$('propH').value;saveHistory();if(selected.tagName==='rect'){selected.setAttribute('x',x);selected.setAttribute('y',y);selected.setAttribute('width',w);selected.setAttribute('height',h)}else if(selected.tagName==='ellipse'){selected.setAttribute('cx',x+w/2);selected.setAttribute('cy',y+h/2);selected.setAttribute('rx',w/2);selected.setAttribute('ry',h/2)}else{let dx=x-b.x,dy=y-b.y;selected.setAttribute('transform',`translate(${dx} ${dy})`)}refresh();drawOverlay()});
+$('objName').onchange=()=>{if(selected){selected.dataset.name=$('objName').value||'Objek';renderLayers();refresh()}};
+$('rotation').onchange=()=>{if(!selected)return;saveHistory();let b=bbox(selected);selected.setAttribute('transform',`rotate(${$('rotation').value} ${b.x+b.w/2} ${b.y+b.h/2})`);drawOverlay()};
+$('frontBtn').onclick=()=>{if(selected){saveHistory();art.append(selected);renderLayers()}};
+$('backBtn').onclick=()=>{if(selected){saveHistory();art.insertBefore(selected,art.firstChild);renderLayers()}};
+$('zoomIn').onclick=()=>{zoom=Math.min(4,zoom*1.15);applyZoom()};$('zoomOut').onclick=()=>{zoom=Math.max(.1,zoom/1.15);applyZoom()};$('fitBtn').onclick=fit;
+function download(name,blob){let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function svgSource(){let clone=svg.cloneNode(true);clone.querySelector('#overlay')?.remove();clone.setAttribute('xmlns',NS);clone.setAttribute('width',svg.viewBox.baseVal.width);clone.setAttribute('height',svg.viewBox.baseVal.height);if(transparent)clone.querySelector('#pageBg')?.setAttribute('fill','none');else clone.querySelector('#pageBg')?.setAttribute('fill',bg);return new XMLSerializer().serializeToString(clone)}
+$('exportSvg').onclick=()=>download(($('fileName').value||'vector-design')+'.svg',new Blob([svgSource()],{type:'image/svg+xml;charset=utf-8'}));
+$('exportPng').onclick=()=>{let src=svgSource(),url=URL.createObjectURL(new Blob([src],{type:'image/svg+xml;charset=utf-8'})),img=new Image();img.onload=()=>{let c=document.createElement('canvas'),w=svg.viewBox.baseVal.width,h=svg.viewBox.baseVal.height;c.width=w*2;c.height=h*2;let ctx=c.getContext('2d');ctx.scale(2,2);ctx.drawImage(img,0,0,w,h);c.toBlob(b=>{download(($('fileName').value||'vector-design')+'.png',b);URL.revokeObjectURL(url)},'image/png')};img.onerror=()=>{alert('Gagal mengekspor PNG. Coba ekspor SVG.');URL.revokeObjectURL(url)};img.src=url};
+$('openBtn').onclick=()=>$('fileInput').click();$('fileInput').onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let txt=await f.text(),doc=new DOMParser().parseFromString(txt,'image/svg+xml'),root=doc.documentElement;if(root.tagName.toLowerCase()!=='svg')throw Error();saveHistory();let vb=(root.getAttribute('viewBox')||'0 0 800 560').split(/[ ,]+/).map(Number);let w=+(root.getAttribute('width')||vb[2]||800),h=+(root.getAttribute('height')||vb[3]||560);art.innerHTML='';[...root.children].forEach(n=>{if(!['title','desc','defs'].includes(n.tagName.toLowerCase())&&n.tagName.toLowerCase()!=='rect')art.append(document.importNode(n,true))});[...art.querySelectorAll('*')].forEach(n=>n.classList.add('obj'));setDoc(w,h,false);$('fileName').value=f.name.replace(/\.svg$/i,'');selected=null;refresh();drawOverlay()}catch(err){alert('File tidak terbaca sebagai SVG yang valid.')}e.target.value=''};
+$('newBtn').onclick=()=>{if(confirm('Buat dokumen baru? Desain yang belum diekspor akan dihapus.')){saveHistory();art.innerHTML='';selected=null;bg='#ffffff';transparent=false;$('bgColor').value=bg;$('pageBg').setAttribute('fill',bg);$('fileName').value='Untitled design';setDoc(800,560,false);refresh();drawOverlay()}};
+$('helpBtn').onclick=()=>alert('VECTOR STUDIO — Panduan singkat\\n\\n1. Pilih tool di toolbar kiri, lalu gambar di artboard.\\n2. Pilih objek untuk mengubah warna, stroke, opacity, ukuran, dan posisi.\\n3. Tool T menambahkan teks. Tool Pen: klik untuk titik, double-click untuk selesai.\\n4. Ctrl+Z undo, Ctrl+Y redo, Ctrl+D duplikat, Delete hapus.\\n5. Ekspor SVG untuk vektor, atau PNG untuk gambar raster.\\n\\nIni adalah editor vektor web ringan, bukan salinan lengkap Adobe Illustrator.');
+document.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo()}else if((e.ctrlKey||e.metaKey)&&(e.key.toLowerCase()==='y'||(e.shiftKey&&e.key.toLowerCase()==='z'))){e.preventDefault();redo()}else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='d'){e.preventDefault();duplicate()}else if(e.key==='Delete'||e.key==='Backspace'){deleteSelected()}else if(e.key==='Escape'){if(drawing){drawing.remove();drawing=null;start=null;pathPoints=[];select(null)}else select(null)}else{let k=e.key.toLowerCase(),map={v:'select',a:'direct',m:'rect',l:'ellipse',p:'pen',t:'text'};if(map[k])setTool(map[k])}});
+window.addEventListener('resize',()=>{if(zoom>1)fit()});
+setDoc(800,560,false);refresh();updateUndo();setTool('select');
+})();
+</script>
+</body>
+</html>
